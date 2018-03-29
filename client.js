@@ -1,5 +1,5 @@
          // initializing socket, connection to server
-         var socket = io.connect('http://localhost:7777');
+         //var socket = io.connect('http://localhost:3333');
          socket.on('connect', function(data) {
             socket.emit('join', 'Hello server from client');
          });
