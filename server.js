@@ -1,21 +1,32 @@
-'use strict';
+var express = require('express');
+var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 
-const express = require('express');
-const socketIO = require('socket.io');
-const path = require('path');
-
-const PORT = process.env.PORT || 3000;
-const INDEX = path.join(__dirname, 'index.html');
-
-const server = express()
-  .use((req, res) => res.sendFile(INDEX) )
-  .listen(PORT, () => console.log(`Listening on ${ PORT }`));
-
-const io = socketIO(server);
-
-io.on('connection', (socket) => {
-  console.log('Client connected');
-  socket.on('disconnect', () => console.log('Client disconnected'));
+app.get('/', function(req, res, next) {
+	res.sendFile(__dirname + '/public/index.html')
 });
 
-setInterval(() => io.emit('time', new Date().toTimeString()), 1000);
+app.use(express.static('public'));
+
+var j = 0;
+
+io.sockets.on('connection', function(client) {
+	console.log('Client connected...');
+	client.user_id = 1;
+	client.on('join', function(data) {
+		console.log(data);
+			console.log(io.sockets.connected)
+	});
+
+
+
+	client.on('messages', function(data){
+		//client.emit('thread', data);
+		//client.broadcast.emit('thread', data);
+	
+	//	.client('1').emit(data);
+	});
+});
+
+server.listen(7777);
