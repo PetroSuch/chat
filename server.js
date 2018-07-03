@@ -13,6 +13,7 @@ io.on('connection', (socket) => {
 
 	socket.on('addUser', (name_user) => {
 		socket.id_user = name_user;
+		console.log(name_user)
 		users[name_user] = socket.id
 		var user = {'name':name_user,'socket_id':socket.id};
 		listUser.push(user);
@@ -33,12 +34,20 @@ io.on('connection', (socket) => {
 
 	socket.on('disconnect', (data) => {
 		for(var i in users){
+			console.log(users[i])
 			if(users[i] == socket.id){
-				console.log(i)
 				delete users[i];
 			}
 		}
-		io.sockets.emit('listUser', users);
+		for(var i in listUser){
+			if(listUser[i]['socket_id'] == socket.id){
+				delete listUser[i];
+				 listUser.splice(i,1);
+			}
+		}
+		console.log(listUser)
+
+		io.sockets.emit('listUser', listUser);
 	});
 
 });
