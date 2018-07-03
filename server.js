@@ -45,5 +45,6 @@ io.on('connection', (socket) => {
 
 
 server.listen(process.env.PORT || port, () => {
+	console.log(process.env.PORT)
   console.log("Listening on port " + port);
 });
