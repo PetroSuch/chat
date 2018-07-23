@@ -3,57 +3,65 @@ var path = require('path');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server,{ wsEngine: 'ws' });
+var port = process.env.PORT || 3000;
+var url = "mongodb://localhost:27017/";
 
-var port = 3000;
+
+
 
 app.use(express.static(path.join(__dirname, "public")));
-var users = {};
-var listUser = [];
-io.on('connection', (socket) => {
-
-	socket.on('addUser', (name_user) => {
-		socket.id_user = name_user;
-		console.log(name_user)
-		users[name_user] = socket.id
-		var user = {'name':name_user,'socket_id':socket.id};
-		listUser.push(user);
-		io.sockets.emit('listUser',listUser);
-	});
-	
-
-	socket.on('send-message', (msg) => {
-		if( io.sockets.connected[msg['id2']]){
-			io.sockets.connected[msg['id2']].emit('send-message', {msg:msg.message});
-		}else{
-			console.log('2')
-		}
-	});
-
-
-
-
-	socket.on('disconnect', (data) => {
-		for(var i in users){
-			console.log(users[i])
-			if(users[i] == socket.id){
-				delete users[i];
-			}
-		}
-		for(var i in listUser){
-			if(listUser[i]['socket_id'] == socket.id){
-				delete listUser[i];
-				 listUser.splice(i,1);
-			}
-		}
-		console.log(listUser)
-
-		io.sockets.emit('listUser', listUser);
-	});
-
+server.listen(port, () => {
+  console.log("Listening on port " + port);
 });
 
+function findUserSocketById(id_user){}
 
-server.listen(process.env.PORT || port, () => {
-	console.log(process.env.PORT)
-  console.log("Listening on port " + port);
+var users = {};
+var listSocket = {};
+io.on('connection', (socket) => {
+	socket.on('addUserDialog', (obj) => {
+		socket.id_1 = obj['id_1'];
+		users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':obj['user_1']}
+		listSocket[socket.id] = obj['id_1'];
+		var socketUser2 = false;
+		if(users[obj['id_2']]){
+			socketUser2 = users[obj['id_2']]
+			socket.emit('userDialog',users[obj['id_2']]);
+		}else{
+			io.sockets.emit('userDialog','user '+obj['id_2'] + ' can not find in socket');
+		}
+	});
+
+	socket.on('sendMsg', (obj)=>{
+		var date = new Date();
+			var dateFormated = date.toISOString().substr(0,10);
+			var time = date.toLocaleTimeString();
+			var msgObj = {
+				"msg":obj['msg'],
+				"id_1":'',
+				"id_2":'',
+				"user_1":'',
+				"user_2":'',
+				"time":time,
+				"date":dateFormated
+			}
+			console.log(obj['id_1'] == null)
+		if(users[obj['id_1']] && users[obj['id_2']] && obj['id_1'] != null ){
+			socketUser2 = users[obj['id_2']]
+			msgObj['id_1'] = users[obj['id_1']]['id'];
+			msgObj['user_1'] = users[obj['id_1']]['user'];
+			msgObj['id_2'] = users[obj['id_2']]['id'];
+			msgObj['user_2'] = users[obj['id_2']]['user'];
+			io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj );
+		}else{
+			io.sockets.emit('userDialog',{'user':false,'connect':false});
+		}
+		console.log(obj)
+		socket.emit('getMsg',msgObj);
+	})
+
+	socket.on('disconnect',(sock)=>{
+		delete users[listSocket[sock.id]]
+		console.log(users)
+	})
 });
