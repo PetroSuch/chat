@@ -34,7 +34,7 @@ var mongoose = require("mongoose");
     if (err) throw err;
     console.log(result);
     db.close();
-  });s
+  });
 });*/
 
 var Schema =  mongoose.Schema;
@@ -104,7 +104,6 @@ io.on('connection', (socket) => {
 		var result = [];
 		
 		dialogModel.find({$or: [{'id_1':obj['id_1']},{'id_2':obj['id_1']}]}, function (err, objFind) {
-			
 			console.log(objFind)
 			console.log(err)
 			var arrId = [];
@@ -150,11 +149,9 @@ io.on('connection', (socket) => {
 	socket.on('find dialog', (obj)=>{
 		var id_1 = obj['id_1']?obj['id_1']:null;
 		var id_2 = obj['id_2']?obj['id_2']:null;
-		console.log(obj)
-		console.log('load dialog')
 		dialogModel.findOne({$or: [{'id_1':id_1,'id_2':id_2},{'id_2':id_1,'id_1':id_2}]}, function (err, objFind) {
-			 mongoose.disconnect();
 				console.log(objFind)
+			 /*mongoose.disconnect();*/
 			if(objFind){
 				socket.emit('result_find_dialog',objFind)
 				socket.id_1 = obj['id_1'];
@@ -165,13 +162,13 @@ io.on('connection', (socket) => {
 				.sort( [['_id', 1]] )
 				.limit(100)
 				.exec(function(err, msg) {
-					 mongoose.disconnect();
+					 /*mongoose.disconnect();*/
 				//	mongoose.connection.close()
 					if (err) throw err;
 				    socket.emit('load_old_message',msg);
 				});
 				msgModel.update({read: false}, {read: true}, function(err, result){
-					 mongoose.disconnect();
+					 /*mongoose.disconnect();*/
      				if(err) return console.log(err);
 				    console.log(result);
 				});
@@ -190,7 +187,7 @@ io.on('connection', (socket) => {
 							user1: result['0'],
 							user2: result['1']
 							}, function (err, small) {
-							mongoose.disconnect();
+							/*mongoose.disconnect();*/
 							if (err){ return err}
 
 							dialogModel.findOne({$or: [{'id_1':obj['id_1'],'id_2':obj['id_2']},{'id_2':obj['id_1'],'id_1':obj['id_2']}]}, function (err, objFind) {
@@ -203,12 +200,12 @@ io.on('connection', (socket) => {
 								.sort( [['_id', 1]] )
 								.limit(100)
 								.exec(function(err, msg) {
-									 mongoose.disconnect();
+									 /*mongoose.disconnect();*/
 									if (err) throw err;
 								    socket.emit('load_old_message',msg);
 								});
 								msgModel.update({read: false}, {read: true}, function(err, result){
-									 mongoose.disconnect();
+									 /*mongoose.disconnect();*/
 				     				if(err) return console.log(err);
 								    console.log(result);
 								});
