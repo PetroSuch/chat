@@ -3,9 +3,10 @@ var path = require('path');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server,{ wsEngine: 'ws' });
-var port = process.env.PORT || 3000;
-var url = "mongodb://localhost:27017/";
 var mysql = require('mysql');
+
+var port = process.env.PORT || 3000;
+
 
 var con = mysql.createConnection({
   host: "qumel.mysql.tools",
@@ -77,27 +78,6 @@ var newMessageModel = new msgModel();
 var newDialogModel = new dialogModel();
 
 
-/*
-dialogModel.create({
-	id_1:8,
-	id_2:9,
-	user1: {'name':'Piter','img':'jpg'},
-	user2: {'name':'Alex','img':'jpg'}
-}, function (err, small) {
-	if (err){ return err}
-	console.log("Сохранен объект");
-});*/
-
-/*newMessageModel.create({
-	id_dialog:'sd09doaw',
-	msg: 'message',
-	id1: 9,
-	id2: 10,
-	name:'Piter'
-}, function (err, small) {
-	if (err){ return err}
-	console.log("Сохранен объект", newM);
-});*/
 
 app.use(express.static(path.join(__dirname, "public")));
 server.listen(port, () => {
@@ -124,6 +104,8 @@ io.on('connection', (socket) => {
 		var result = [];
 		
 		dialogModel.find({$or: [{'id_1':obj['id_1']},{'id_2':obj['id_1']}]}, function (err, objFind) {
+			console.log(objFind)
+			console.log(err)
 			var arrId = [];
 			for(var key in objFind){
 				arrId.push(objFind[key]['_id'])
@@ -334,177 +316,4 @@ io.on('connection', (socket) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-var MongoClient = require('mongodb').MongoClient;
-
-
-var uri = "mongodb://kiril:aezakmi@cluster0-shard-00-00-3wy33.mongodb.net:27017,cluster0-shard-00-01-3wy33.mongodb.net:27017,cluster0-shard-00-02-3wy33.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true";
-
-MongoClient.connect(uri, { useNewUrlParser: true }, function(err, db) {
-	console.log(err)
-	db.message.insertOne()
-   db.close();
-});*/
-/*var uri = "mongodb://root:aezakmi1@ds235711.mlab.com:35711/kiril"
-var mongoose = require("mongoose");
-	mongoose.connect(uri,{ useNewUrlParser: true });
-
-var Schema =  mongoose.Schema;
-
-var msgScheme = new Schema({
-    msg: String,
-    id1: Number,
-    id2:Number,
-    name1:String,
-},{timestamps: true});
-
-var newMsg = mongoose.model("messages", msgScheme);
-*/
-
-/*newMsg.find({},function(err,res){
-	console.log(res)
-	console.log(err)
-})*/
-
-/*
-
-var newM = new newMsg();
-
-newMsg.create({
-msg: 'as',
-id1: 1,
-id2: 1,
-name1:'s'
-}, function (err, small) {
-if (err){ return err}
-console.log("Сохранен объект", newM);
-});
-*/
-
- 
-
-/*newMsg.remove({},function(err,res){
-	console.log(arguments)
-})*/
-
-
-
-
-
-
-
-
-
-	/*
-	socket.on('send-message', (msg) => {
-		console.log(msg)
-		socket.emit('send-message', 'hello client')
-
-		let sendMsg = [];
-			sendMsg.push(msg);
-
-		if(msg['id2'] && typeof users[msg['id2']] != 'undefined'){
-			io.sockets.connected[users[msg['id2']]['socket_id']].emit('send-message',sendMsg);
-		}
-
-		var newM = new newMsg();
-
-		newMsg.create({
-			msg: msg.msg,
-			id1: msg['id1'],
-			id2: msg['id2'],
-			name1:msg['name1'],
-		}, function (err, small) {
-			console.log(err)
-		  if (err) return handleError(err);
-		  console.log("Сохранен объект", newM);
-		});
-	});
-
-
-	socket.on('send-load-chat',(obj)=>{
-		newMsg.find({$or : [{id1: parseInt(obj['id1'])},{id2: parseInt(obj['id1'])}]
-					},function(err,res){
-			io.sockets.connected[socket.id].emit('load-chat', res);
-		});
-	})
-
-	socket.on('disconnect', (data) => {
-		console.log('disconnect')
-		for(var i in users){
-			if(users[i] == socket.id){
-				delete users[i];
-			}
-		}
-		for(var i in listUser){
-			if(listUser[i]['socket_id'] == socket.id){
-				delete listUser[i];
-				 listUser.splice(i,1);
-			}
-		}
-
-		io.sockets.emit('listUser', listUser);
-	});
-
-});
-
-*/
 
