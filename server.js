@@ -5,9 +5,99 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server,{ wsEngine: 'ws' });
 var port = process.env.PORT || 3000;
 var url = "mongodb://localhost:27017/";
+var mysql = require('mysql');
+
+var con = mysql.createConnection({
+  host: "qumel.mysql.tools",
+  user: "qumel_myspace",
+  password: "8ng7bd6u",
+  database: "qumel_myspace"
+});
+
+con.connect(function(err) {
+  con.end()
+  console.log("Connected Mysql!");
+});
 
 
+var uri = "mongodb://root:aezakmi1@ds235711.mlab.com:35711/kiril";
+var options = {
+	useNewUrlParser: true 
+};
+var mongoose = require("mongoose");
+	mongoose.connect(uri,options);
+/*MongoClient.connect(uri, function(err, db) {
+  if (err) throw err;
+  var dbo = db.db("kiril");
+  dbo.collection("messages").findOne({}, function(err, result) {
+    if (err) throw err;
+    console.log(result);
+    db.close();
+  });
+});*/
 
+var Schema =  mongoose.Schema;
+
+var msgScheme = new Schema({
+	id_dialog:String,
+    msg: String,
+    read:Boolean,
+    id_1:Number,
+	id_2:Number,
+	user_1:Object,
+	user_2:Object,
+	time:String,
+	date:String
+},{timestamps: true});
+
+
+var dialogSchema = new Schema({
+	id_1:Number,
+    id_2: Number,
+    user1: {
+    	id:Number,
+    	name:String,
+    	phone:Number,
+    	img:String,
+    	date_edit:String
+    },
+    user2:{
+    	id:Number,
+    	name:String,
+    	phone:Number,
+    	img:String,
+    	date_edit:String
+    }
+},{timestamps: true});
+
+var msgModel = mongoose.model("messages", msgScheme);
+var dialogModel = mongoose.model("dialog", dialogSchema);
+
+var newMessageModel = new msgModel();
+var newDialogModel = new dialogModel();
+
+
+/*
+dialogModel.create({
+	id_1:8,
+	id_2:9,
+	user1: {'name':'Piter','img':'jpg'},
+	user2: {'name':'Alex','img':'jpg'}
+}, function (err, small) {
+	if (err){ return err}
+	console.log("Сохранен объект");
+});*/
+
+/*newMessageModel.create({
+	id_dialog:'sd09doaw',
+	msg: 'message',
+	id1: 9,
+	id2: 10,
+	name:'Piter'
+}, function (err, small) {
+	if (err){ return err}
+	console.log("Сохранен объект", newM);
+});*/
 
 app.use(express.static(path.join(__dirname, "public")));
 server.listen(port, () => {
@@ -19,18 +109,151 @@ function findUserSocketById(id_user){}
 var users = {};
 var listSocket = {};
 io.on('connection', (socket) => {
-	socket.on('addUserDialog', (obj) => {
-		socket.id_1 = obj['id_1'];
-		users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':obj['user_1']}
-		listSocket[socket.id] = obj['id_1'];
-		var socketUser2 = false;
-		if(users[obj['id_2']]){
-			socketUser2 = users[obj['id_2']]
-			socket.emit('userDialog',users[obj['id_2']]);
+
+	socket.on('check online', (obj)=>{
+		if(typeof users[obj['id_2']] != 'undefined' && obj['id_2'] != null){
+			socket.emit('check online',true)
 		}else{
-			io.sockets.emit('userDialog','user '+obj['id_2'] + ' can not find in socket');
+			socket.emit('check online',false)
 		}
-	});
+	})
+
+	
+	socket.on('find list dialog', (obj)=>{
+		console.log('find list dialog')
+		var result = [];
+		
+		dialogModel.find({$or: [{'id_1':obj['id_1']},{'id_2':obj['id_1']}]}, function (err, objFind) {
+			var arrId = [];
+			for(var key in objFind){
+				arrId.push(objFind[key]['_id'])
+			}
+			msgModel.find({
+			    'id_dialog': { $in: arrId}
+			})
+			.sort({'_id': -1})
+			.exec(function(err, msg) {
+				//mongoose.connection.close()
+				if(err){console.log(err)}
+				if (err) throw err;
+				for(var k in objFind){
+					var push = {'dialog':objFind[k],'last_msg':'','count_unread':0}
+					for(j in msg){
+						if(objFind[k]['_id'] == msg[j]['id_dialog']){
+							push['last_msg'] = msg[j];
+							break;
+						}
+					}
+					for(j in msg){
+						if(objFind[k]['_id'] == msg[j]['id_dialog'] && msg[j]['read'] == false){
+							push['count_unread'] += 1;
+						}
+					}
+					result.push(push)	
+					socket.emit('list dialog',result);
+				}
+			});
+		
+		})
+	})
+
+	socket.on('add user',(obj)=>{
+		socket.id_1 = obj['id_1'];
+		var user1 = obj['user1'];
+		users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1}
+		listSocket[socket.id] = obj['id_1'];
+	})
+
+	socket.on('find dialog', (obj)=>{
+		var id_1 = obj['id_1']?obj['id_1']:null;
+		var id_2 = obj['id_2']?obj['id_2']:null;
+		dialogModel.findOne({$or: [{'id_1':id_1,'id_2':id_2},{'id_2':id_1,'id_1':id_2}]}, function (err, objFind) {
+			 mongoose.disconnect();
+			if(objFind){
+				socket.emit('result_find_dialog',objFind)
+				socket.id_1 = obj['id_1'];
+				var user1 = objFind.user1.id==obj['id_1']?objFind.user1:objFind.user2;
+				users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1}
+				listSocket[socket.id] = obj['id_1'];
+				msgModel.find({'id_dialog':objFind['_id']})
+				.sort( [['_id', 1]] )
+				.limit(100)
+				.exec(function(err, msg) {
+					 mongoose.disconnect();
+				//	mongoose.connection.close()
+					if (err) throw err;
+				    socket.emit('load_old_message',msg);
+				});
+				msgModel.update({read: false}, {read: true}, function(err, result){
+					 mongoose.disconnect();
+     				if(err) return console.log(err);
+				    console.log(result);
+				});
+
+			}else{
+			
+
+				con.query("SELECT id,name,phone,img,date_edit FROM user WHERE id IN ('"+id_1+"','"+id_2+"')", function (err, result, fields) {
+					
+					if(err) throw err;
+					if(result.length > 1){
+						var newDialogModel = new dialogModel();
+						dialogModel.create({
+							id_1:result['0'].id,
+							id_2:result['1'].id,
+							user1: result['0'],
+							user2: result['1']
+							}, function (err, small) {
+							mongoose.disconnect();
+							if (err){ return err}
+
+							dialogModel.findOne({$or: [{'id_1':obj['id_1'],'id_2':obj['id_2']},{'id_2':obj['id_1'],'id_1':obj['id_2']}]}, function (err, objFind) {
+								socket.emit('result_find_dialog',objFind)
+								socket.id_1 = obj['id_1'];
+								var user1 = objFind.user1.id==obj['id_1']?objFind.user1:objFind.user2;
+								users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1}
+								listSocket[socket.id] = obj['id_1'];
+								msgModel.find({'id_dialog':objFind['_id']})
+								.sort( [['_id', 1]] )
+								.limit(100)
+								.exec(function(err, msg) {
+									 mongoose.disconnect();
+									if (err) throw err;
+								    socket.emit('load_old_message',msg);
+								});
+								msgModel.update({read: false}, {read: true}, function(err, result){
+									 mongoose.disconnect();
+				     				if(err) return console.log(err);
+								    console.log(result);
+								});
+							})
+						});
+					}
+					con.end();
+				});
+			}
+
+		});
+		
+	})
+	socket.on('typing', (obj) => {
+		if(typeof users[obj['id_2']] != 'undefined' && obj['id_2'] != null){
+			var socketUser2 = users[obj['id_2']];
+			var objSend = {'typingBool':obj['typing']};
+			try {
+				io.sockets.connected[socketUser2['socket']].emit('is_typing', objSend );
+			}catch(err){
+			//	console.log(err)
+			}
+		}
+	})
+
+
+
+	/*socket.on('addUserDialog', (obj) => {
+		
+		
+	});*/
 
 	socket.on('sendMsg', (obj)=>{
 		var date = new Date();
@@ -38,30 +261,250 @@ io.on('connection', (socket) => {
 			var time = date.toLocaleTimeString();
 			var msgObj = {
 				"msg":obj['msg'],
-				"id_1":'',
-				"id_2":'',
-				"user_1":'',
-				"user_2":'',
+				"id_1":obj['id_1'],
+				"id_2":obj['id_2'],
+				"user_1":obj['user_1'],
+				"user_2":obj['user_1'],
 				"time":time,
-				"date":dateFormated
+				"date":dateFormated,
 			}
-			console.log(obj['id_1'] == null)
+		
+
+		
+		var read = false;
+
 		if(users[obj['id_1']] && users[obj['id_2']] && obj['id_1'] != null ){
-			socketUser2 = users[obj['id_2']]
-			msgObj['id_1'] = users[obj['id_1']]['id'];
-			msgObj['user_1'] = users[obj['id_1']]['user'];
-			msgObj['id_2'] = users[obj['id_2']]['id'];
-			msgObj['user_2'] = users[obj['id_2']]['user'];
-			io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj );
+			try {
+				socketUser2 = users[obj['id_2']]
+				io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj );
+				read = true;
+			} catch (err) {
+				//console.log(err)
+			}
+			
 		}else{
-			io.sockets.emit('userDialog',{'user':false,'connect':false});
+			socket.id_1 = obj['id_1'];
+			users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':obj['user_']}
+			listSocket[socket.id] = obj['id_1'];
+			
+			if(users[obj['id_2']]){
+				try {
+					socketUser2 = users[obj['id_2']]
+					io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj );
+					read = true;
+				} catch (err) {
+					//console.log(err)
+				}
+			}
+			
+			//io.sockets.emit('userDialog',{'user':false,'connect':false});
 		}
-		console.log(obj)
+		var newMessageModel = new msgModel();
+		msgModel.create({
+			id_dialog:obj['id_dialog'],
+			msg: obj['msg'],
+			id_1:obj['id_1'],
+			id_2:obj['id_2'],
+			user_1:obj['user_1'],
+			user_2:obj['user_1'],
+			time:time,
+			date:dateFormated,
+			read:read
+		}, function (err, small) {
+			if (err){ return err}
+			//console.log(read)
+			//console.log("Сохранен объект");
+		});
 		socket.emit('getMsg',msgObj);
+
+		
+		
 	})
 
 	socket.on('disconnect',(sock)=>{
-		delete users[listSocket[sock.id]]
-		console.log(users)
+
+		console.log(socket.id)
+		delete users[listSocket[socket.id]]
 	})
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+var MongoClient = require('mongodb').MongoClient;
+
+
+var uri = "mongodb://kiril:aezakmi@cluster0-shard-00-00-3wy33.mongodb.net:27017,cluster0-shard-00-01-3wy33.mongodb.net:27017,cluster0-shard-00-02-3wy33.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true";
+
+MongoClient.connect(uri, { useNewUrlParser: true }, function(err, db) {
+	console.log(err)
+	db.message.insertOne()
+   db.close();
+});*/
+/*var uri = "mongodb://root:aezakmi1@ds235711.mlab.com:35711/kiril"
+var mongoose = require("mongoose");
+	mongoose.connect(uri,{ useNewUrlParser: true });
+
+var Schema =  mongoose.Schema;
+
+var msgScheme = new Schema({
+    msg: String,
+    id1: Number,
+    id2:Number,
+    name1:String,
+},{timestamps: true});
+
+var newMsg = mongoose.model("messages", msgScheme);
+*/
+
+/*newMsg.find({},function(err,res){
+	console.log(res)
+	console.log(err)
+})*/
+
+/*
+
+var newM = new newMsg();
+
+newMsg.create({
+msg: 'as',
+id1: 1,
+id2: 1,
+name1:'s'
+}, function (err, small) {
+if (err){ return err}
+console.log("Сохранен объект", newM);
+});
+*/
+
+ 
+
+/*newMsg.remove({},function(err,res){
+	console.log(arguments)
+})*/
+
+
+
+
+
+
+
+
+
+	/*
+	socket.on('send-message', (msg) => {
+		console.log(msg)
+		socket.emit('send-message', 'hello client')
+
+		let sendMsg = [];
+			sendMsg.push(msg);
+
+		if(msg['id2'] && typeof users[msg['id2']] != 'undefined'){
+			io.sockets.connected[users[msg['id2']]['socket_id']].emit('send-message',sendMsg);
+		}
+
+		var newM = new newMsg();
+
+		newMsg.create({
+			msg: msg.msg,
+			id1: msg['id1'],
+			id2: msg['id2'],
+			name1:msg['name1'],
+		}, function (err, small) {
+			console.log(err)
+		  if (err) return handleError(err);
+		  console.log("Сохранен объект", newM);
+		});
+	});
+
+
+	socket.on('send-load-chat',(obj)=>{
+		newMsg.find({$or : [{id1: parseInt(obj['id1'])},{id2: parseInt(obj['id1'])}]
+					},function(err,res){
+			io.sockets.connected[socket.id].emit('load-chat', res);
+		});
+	})
+
+	socket.on('disconnect', (data) => {
+		console.log('disconnect')
+		for(var i in users){
+			if(users[i] == socket.id){
+				delete users[i];
+			}
+		}
+		for(var i in listUser){
+			if(listUser[i]['socket_id'] == socket.id){
+				delete listUser[i];
+				 listUser.splice(i,1);
+			}
+		}
+
+		io.sockets.emit('listUser', listUser);
+	});
+
+});
+
+*/
+
