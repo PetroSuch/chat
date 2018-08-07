@@ -34,7 +34,7 @@ var mongoose = require("mongoose");
     if (err) throw err;
     console.log(result);
     db.close();
-  });
+  });s
 });*/
 
 var Schema =  mongoose.Schema;
@@ -104,6 +104,7 @@ io.on('connection', (socket) => {
 		var result = [];
 		
 		dialogModel.find({$or: [{'id_1':obj['id_1']},{'id_2':obj['id_1']}]}, function (err, objFind) {
+			
 			console.log(objFind)
 			console.log(err)
 			var arrId = [];
@@ -151,6 +152,7 @@ io.on('connection', (socket) => {
 		var id_2 = obj['id_2']?obj['id_2']:null;
 		dialogModel.findOne({$or: [{'id_1':id_1,'id_2':id_2},{'id_2':id_1,'id_1':id_2}]}, function (err, objFind) {
 			 mongoose.disconnect();
+				console.log(objFind)
 			if(objFind){
 				socket.emit('result_find_dialog',objFind)
 				socket.id_1 = obj['id_1'];
