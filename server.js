@@ -150,6 +150,8 @@ io.on('connection', (socket) => {
 	socket.on('find dialog', (obj)=>{
 		var id_1 = obj['id_1']?obj['id_1']:null;
 		var id_2 = obj['id_2']?obj['id_2']:null;
+		console.log(obj)
+		console.log('load dialog')
 		dialogModel.findOne({$or: [{'id_1':id_1,'id_2':id_2},{'id_2':id_1,'id_1':id_2}]}, function (err, objFind) {
 			 mongoose.disconnect();
 				console.log(objFind)
