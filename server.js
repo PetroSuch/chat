@@ -120,7 +120,7 @@ io.on('connection', (socket) => {
 	})
 
 	socket.on('add user',(obj)=>{
-		if(!users[obj['id_1']]){
+		//if(!users[obj['id_1']]){
 			socket.id_1 = obj['id_1'];
 			var user1 = obj['user1'];
 			users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1,'id_dialog':''}
@@ -128,7 +128,7 @@ io.on('connection', (socket) => {
 			console.log('user is add '+users[obj['id_1']]['socket'])
 			console.log('-----')
 
-		}/*else{
+		/*else{
 			users[obj['id_1']]['socket'][socket.id]
 			listSocket[socket.id] = obj['id_1'];
 			console.log('user is update '+socket.id)
@@ -164,7 +164,7 @@ io.on('connection', (socket) => {
 				
 				msgModel.find({'id_dialog':objFind['_id']})
 				.sort({'_id':-1})
-				.limit(5)
+				.limit(100)
 				.exec(function(err, msg) {
 					 /*mongoose.disconnect();*/
 				//	mongoose.connection.close()
@@ -202,7 +202,7 @@ io.on('connection', (socket) => {
 								}*/
 								msgModel.find({'id_dialog':objFind['_id']})
 								.sort({'_id':-1})
-								.limit(5)
+								.limit(100)
 								.exec(function(err, msg) {
 									var res = msg.reverse()
 									 /*mongoose.disconnect();*/
@@ -232,50 +232,70 @@ io.on('connection', (socket) => {
 	})
 
 
-
+	socket.on('delete msg', (obj)=>{
+		msgModel.remove({id_dialog:obj['id_dialog'],_id:obj['id_msg']}, function(err, result){
+		    if(err) return console.log(err);
+		    console.log(result)
+		    if(result){
+		    	socket.emit('new delete message',obj)
+		    	if( users[obj['id_2']] ){
+					var socketUser2 = users[obj['id_2']];
+					try {
+						io.sockets.connected[socketUser2['socket']].emit('new delete message', obj );
+					}catch(err){
+					//	console.log(err)
+					}
+				}
+		    }
+		});
+	})
 
 
 	socket.on('sendMsg', (obj)=>{
+		var read = false;
 		var date = new Date();
-			var dateFormated = date.toISOString().substr(0,10);
-			var time = date.toLocaleTimeString();
+		var dateFormated = date.toISOString().substr(0,10);
+		var time = date.toLocaleTimeString();
+		var id_msg;
+		var newMessageModel = new msgModel();
+			msgModel.create({
+				id_dialog:obj['id_dialog'],
+				msg: obj['msg'],
+				id_1:obj['id_1'],
+				id_2:obj['id_2'],
+				user_1:obj['user_1'],
+				user_2:obj['user_1'],
+				id_author:obj['id_author'],
+				time:time,
+				date:dateFormated,
+				read:read
+			}, function (err, msg) {
+				if (err){ return err}
+					var id_msg = msg.id;
+				console.log(msg.id)
+				//console.log("Сохранен объект");
+			});
+
+
+	
 			var msgObj = {
+				"id_msg":id_msg,
+				"id_dialog":obj['id_dialog'],
 				"msg":obj['msg'],
 				"id_1":obj['id_1'],
 				"id_2":obj['id_2'],
 				"user_1":obj['user_1'],
 				"user_2":obj['user_1'],
-				"id_dialog":obj['id_dialog'],
+				"id_author":obj['id_author'],
 				"time":time,
 				"date":dateFormated,
 				"read":false
-			}
+			}		
 
-		if(users[obj['id_1']]){
-			
-			
-		}else{
-			
-			/*socket.id_1 = obj['id_1'];
-			users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':obj['user'],'id_dialog':obj['id_dialog']}
-			listSocket[socket.id] = obj['id_1'];*/
-		}
-
-		var read = false;
-		for (var k in users) {
-			console.log(users[k]['socket'])
-		}
-		console.log('------')
 		if(users[obj['id_2']]){
-			console.log('user emit message '+users[obj['id_2']]['socket'])
-			
 			try {
 				socketUser2 = users[obj['id_2']]
-				if( users[obj['id_2']]['id_dialog'] == obj['id_dialog']){
-					read = true;
-					msgObj['read'] = true;
-				}
-				
+				/*if( users[obj['id_2']]['id_dialog'] == obj['id_dialog']){read = true;msgObj['read'] = true;}*/
 				io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj);
 				io.sockets.connected[socketUser2['socket']].emit('newMsgDialog',msgObj);
 				
@@ -285,38 +305,27 @@ io.on('connection', (socket) => {
 		}
 		socket.emit('getMsg',msgObj);
 
-		var newMessageModel = new msgModel();
-		msgModel.create({
-			id_dialog:obj['id_dialog'],
-			msg: obj['msg'],
-			id_1:obj['id_1'],
-			id_2:obj['id_2'],
-			user_1:obj['user_1'],
-			user_2:obj['user_1'],
-			id_author:obj['id_author'],
-			time:time,
-			date:dateFormated,
-			read:read
-		}, function (err, small) {
-			if (err){ return err}
-			//console.log("Сохранен объект");
-		});
 		
 	})
 
 	socket.on('seen message dialog',(obj)=>{
-		msgModel.update({read: false,id_author:obj['id_2'],id_dialog:obj['id_dialog']}, {read: true},{ multi: true }, function(err, result){
-		    if(err) return console.log(err);
-		});
-		if(users[obj['id_2']]){	
 
-			try {
-				io.sockets.connected[users[obj['id_2']]['socket']].emit('user see you message',{id_dialog:obj['id_dialog']});				
-			} catch (err) {
-				//console.log(err)
+		if(obj['id_2'] == obj['last_msg_author']){
+			msgModel.update({read: false,id_author:obj['id_2'],id_dialog:obj['id_dialog']}, {read: true},{ multi: true }, function(err, result){
+			    if(err) return console.log(err);
+			});
+			if(users[obj['id_2']]){	
+				try {
+					io.sockets.connected[users[obj['id_2']]['socket']].emit('user see you message',{id_dialog:obj['id_dialog']});				
+								
+				} catch (err) {
+					//console.log(err)
+				}
 			}
+			socket.emit('user see you message',{id_dialog:obj['id_dialog']});	
 		}
 	})
+
 
 
 
