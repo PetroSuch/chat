@@ -306,13 +306,10 @@ io.on('connection', (socket) => {
 				edit:false
 			}, function (err, msg) {
 				if (err){ return err}
-					var id_msg = msg.id;
-				console.log('msg id - ' + msg.id)
+				var id_msg = msg.id;
+				
 				//console.log("Сохранен объект");
-			});
-
-
-	
+				
 			var msgObj = {
 				"id_msg":id_msg,
 				"id_dialog":obj['id_dialog'],
@@ -328,18 +325,22 @@ io.on('connection', (socket) => {
 				"edit":false
 			}		
 
-		socket.emit('getMsg',msgObj);
-		if(users[obj['id_2']]){
-			try {
-				socketUser2 = users[obj['id_2']]
-				/*if( users[obj['id_2']]['id_dialog'] == obj['id_dialog']){read = true;msgObj['read'] = true;}*/
-				io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj);
-				io.sockets.connected[socketUser2['socket']].emit('newMsgDialog',msgObj);
-				
-			} catch (err) {
-				//console.log(err)
-			}
-		}
+				socket.emit('getMsg',msgObj);
+				if(users[obj['id_2']]){
+					try {
+						socketUser2 = users[obj['id_2']]
+						/*if( users[obj['id_2']]['id_dialog'] == obj['id_dialog']){read = true;msgObj['read'] = true;}*/
+						io.sockets.connected[socketUser2['socket']].emit('getMsg',msgObj);
+						io.sockets.connected[socketUser2['socket']].emit('newMsgDialog',msgObj);
+						
+					} catch (err) {
+						//console.log(err)
+					}
+				}
+			});
+
+
+	
 		
 
 		
