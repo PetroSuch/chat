@@ -35,6 +35,7 @@ var msgScheme = new Schema({
 	id_dialog:String,
     msg: String,
     read:Boolean,
+    edit:Boolean,
     id_1:Number,
 	id_2:Number,
 	id_author:Number,
@@ -71,6 +72,20 @@ var users = {};
 var listSocket = {};
 io.on('connection', (socket) => {
 
+	socket.on('check_online_list_dialog', (obj)=>{
+		var listDialog = obj['listDialog']
+		for(var k in listDialog){
+			var id_2 = obj['id_user'] == listDialog[k]['dialog']['id_1']?listDialog[k]['dialog']['id_2']:listDialog[k]['dialog']['id_1']
+			if(users[id_2]){
+				listDialog[k]['online'] = true
+			}else{
+				listDialog[k]['online'] = false
+			}
+		}
+
+		socket.emit('result_check_online_list_dialog',listDialog)
+	})
+
 	socket.on('check online', (obj)=>{
 		if(typeof users[obj['id_2']] != 'undefined' && obj['id_2'] != null){
 			socket.emit('check online',true)
@@ -84,7 +99,7 @@ io.on('connection', (socket) => {
 		console.log('find list dialog')
 		var result = [];
 		
-		dialogModel.find({$or: [{'id_1':obj['id_1']},{'id_2':obj['id_1']}]}, function (err, objFind) {
+		dialogModel.find({$or: [{'id_1':obj['id_user']},{'id_2':obj['id_user']}]}, function (err, objFind) {
 			var arrId = [];
 			for(var key in objFind){
 				arrId.push(objFind[key]['_id'])
@@ -98,7 +113,12 @@ io.on('connection', (socket) => {
 				if(err){console.log(err)}
 				if (err) throw err;
 				for(var k in objFind){
-					var push = {'dialog':objFind[k],'last_msg':'','count_unread':0}
+					var id_2 = obj['id_user'] == objFind[k]['id_1']?objFind[k]['id_2']:objFind[k]['id_1']
+
+					var push = {'dialog':objFind[k],'last_msg':'','count_unread':0,"online":false}
+					if(users[id_2]){
+						push['online'] = true;
+					}
 					for(j in msg){
 						if(objFind[k]['_id'] == msg[j]['id_dialog'] ){
 							push['last_msg'] = msg[j];
@@ -111,6 +131,7 @@ io.on('connection', (socket) => {
 							push['count_unread'] += 1;
 						}
 					}
+
 					result.push(push)	
 					socket.emit('list dialog',result);
 				}
@@ -155,32 +176,21 @@ io.on('connection', (socket) => {
 			 /*mongoose.disconnect();*/
 			if(objFind){
 				socket.emit('result_find_dialog',objFind)
-				/*if(!users[obj['id_1']]){
-					socket.id_1 = obj['id_1'];
-					var user1 = objFind.user1.id==obj['id_1']?objFind.user1:objFind.user2;
-					users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1}
-					listSocket[socket.id] = obj['id_1'];
-				}*/
-				
+
 				msgModel.find({'id_dialog':objFind['_id']})
 				.sort({'_id':-1})
 				.limit(100)
 				.exec(function(err, msg) {
-					 /*mongoose.disconnect();*/
-				//	mongoose.connection.close()
 					var res = msg.reverse()
-
 					if (err) throw err;
 				    socket.emit('load_old_message',res);
 				});
-		
-
-			}else{
-
+			}else{	
 				con.query("SELECT id,name,phone,img,date_edit FROM user WHERE id IN ("+id_1+","+id_2+")", function (err, result, fields) {
 					
 					if(err) console.log(err);				
 					if(result){
+						console.log(result)
 						var newDialogModel = new dialogModel();
 						dialogModel.create({
 							id_1:result['0']['id'],
@@ -188,18 +198,17 @@ io.on('connection', (socket) => {
 							user1: result['0'],
 							user2: result['1']
 							}, function (err, small) {
-							/*mongoose.disconnect();*/
 							if (err){ return err}
-
+							if(users[obj['id_2']]){
+								var socketUser2 = users[obj['id_2']];
+								try {
+									io.sockets.connected[socketUser2['socket']].emit('refresh list dialog', {bool:true} );
+								}catch(err){
+								//	console.log(err)
+								}
+							}
 							dialogModel.findOne({$or: [{'id_1':obj['id_1'],'id_2':obj['id_2']},{'id_2':obj['id_1'],'id_1':obj['id_2']}]}, function (err, objFind) {
 								socket.emit('result_find_dialog',objFind)
-								/*
-								if(!users[obj['id_1']]){
-									socket.id_1 = obj['id_1'];
-									var user1 = objFind.user1['id']==obj['id_1']?objFind.user1:objFind.user2;
-									users[obj['id_1']] = {'id':obj['id_1'],'socket':socket.id,'user':user1}
-									listSocket[socket.id] = obj['id_1'];
-								}*/
 								msgModel.find({'id_dialog':objFind['_id']})
 								.sort({'_id':-1})
 								.limit(100)
@@ -230,14 +239,39 @@ io.on('connection', (socket) => {
 			}
 		}
 	})
-
+	socket.on('edit message', (obj)=>{
+		console.log(obj)
+		msgModel.update({_id: obj['id_msg'],id_dialog:obj['id_dialog']}, {msg: obj['msg']}, function(err, result){
+		    if(err)  console.log(err);
+		    console.log(result);
+		    if(result){
+		    	socket.emit('new edit message',obj)
+		    	if( users[obj['id_2']] ){
+					var socketUser2 = users[obj['id_2']];
+					try {
+						io.sockets.connected[socketUser2['socket']].emit('new edit message', obj);
+					}catch(err){
+					//	console.log(err)
+					}
+				}
+		    }
+		});
+	})
 
 	socket.on('delete msg', (obj)=>{
-		msgModel.remove({id_dialog:obj['id_dialog'],_id:obj['id_msg']}, function(err, result){
-		    if(err) return console.log(err);
-		    console.log(result)
+		/*msgModel.findOne({id_dialog:obj['id_dialog'],_id:obj['id_msg']}, function(err, result){
+		    if(err)  console.log(err);
 		    if(result){
-		    	socket.emit('new delete message',obj)
+		    	if(result['id_author'] == obj['id_user']){
+		    		check is user message
+		    	}	
+		    }
+		});*/
+
+		msgModel.remove({id_dialog:obj['id_dialog'],_id:obj['id_msg']}, function(err, result){
+			if(err) console.log(err)
+			if(result){
+				socket.emit('new delete message',obj)
 		    	if( users[obj['id_2']] ){
 					var socketUser2 = users[obj['id_2']];
 					try {
@@ -246,8 +280,8 @@ io.on('connection', (socket) => {
 					//	console.log(err)
 					}
 				}
-		    }
-		});
+			}
+    	})
 	})
 
 
@@ -268,11 +302,12 @@ io.on('connection', (socket) => {
 				id_author:obj['id_author'],
 				time:time,
 				date:dateFormated,
-				read:read
+				read:read,
+				edit:false
 			}, function (err, msg) {
 				if (err){ return err}
 					var id_msg = msg.id;
-				console.log(msg.id)
+				console.log('msg id - ' + msg.id)
 				//console.log("Сохранен объект");
 			});
 
@@ -289,9 +324,11 @@ io.on('connection', (socket) => {
 				"id_author":obj['id_author'],
 				"time":time,
 				"date":dateFormated,
-				"read":false
+				"read":false,
+				"edit":false
 			}		
 
+		socket.emit('getMsg',msgObj);
 		if(users[obj['id_2']]){
 			try {
 				socketUser2 = users[obj['id_2']]
@@ -303,18 +340,16 @@ io.on('connection', (socket) => {
 				//console.log(err)
 			}
 		}
-		socket.emit('getMsg',msgObj);
+		
 
 		
 	})
 
 	socket.on('seen message dialog',(obj)=>{
 
-		if(obj['id_2'] == obj['last_msg_author']){
-			msgModel.update({read: false,id_author:obj['id_2'],id_dialog:obj['id_dialog']}, {read: true},{ multi: true }, function(err, result){
-			    if(err) return console.log(err);
-			});
-			if(users[obj['id_2']]){	
+		msgModel.update({read: false,id_author:obj['id_2'],id_dialog:obj['id_dialog']}, {read: true},{ multi: true }, function(err, result){
+		    if(err) return console.log(err);
+		    if(users[obj['id_2']]){	
 				try {
 					io.sockets.connected[users[obj['id_2']]['socket']].emit('user see you message',{id_dialog:obj['id_dialog']});				
 								
@@ -322,8 +357,9 @@ io.on('connection', (socket) => {
 					//console.log(err)
 				}
 			}
-			socket.emit('user see you message',{id_dialog:obj['id_dialog']});	
-		}
+			socket.emit('user see you message',{id_dialog:obj['id_dialog']});
+		});
+			
 	})
 
 
