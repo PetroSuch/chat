@@ -241,7 +241,7 @@ io.on('connection', (socket) => {
 	})
 	socket.on('edit message', (obj)=>{
 		console.log(obj)
-		msgModel.update({_id: obj['id_msg'],id_dialog:obj['id_dialog']}, {msg: obj['msg']}, function(err, result){
+		msgModel.update({_id: obj['id_msg']}, {msg: obj['msg'],edit:true}, function(err, result){
 		    if(err)  console.log(err);
 		    console.log(result);
 		    if(result){
@@ -267,8 +267,9 @@ io.on('connection', (socket) => {
 		    	}	
 		    }
 		});*/
+		console.log(obj)
 
-		msgModel.remove({id_dialog:obj['id_dialog'],_id:obj['id_msg']}, function(err, result){
+		msgModel.remove({_id:obj['id_msg']}, function(err, result){
 			if(err) console.log(err)
 			if(result){
 				socket.emit('new delete message',obj)
@@ -291,10 +292,13 @@ io.on('connection', (socket) => {
 		var dateFormated = date.toISOString().substr(0,10);
 		var time = date.toLocaleTimeString();
 		var id_msg;
+
+
+		var msgParse = urlify(obj['msg']);
 		var newMessageModel = new msgModel();
 			msgModel.create({
 				id_dialog:obj['id_dialog'],
-				msg: obj['msg'],
+				msg: msgParse,
 				id_1:obj['id_1'],
 				id_2:obj['id_2'],
 				user_1:obj['user_1'],
@@ -307,24 +311,20 @@ io.on('connection', (socket) => {
 			}, function (err, msg) {
 				if (err){ return err}
 				var id_msg = msg.id;
-				
-				//console.log("Сохранен объект");
-				
-			var msgObj = {
-				"id_msg":id_msg,
-				"id_dialog":obj['id_dialog'],
-				"msg":obj['msg'],
-				"id_1":obj['id_1'],
-				"id_2":obj['id_2'],
-				"user_1":obj['user_1'],
-				"user_2":obj['user_1'],
-				"id_author":obj['id_author'],
-				"time":time,
-				"date":dateFormated,
-				"read":false,
-				"edit":false
-			}		
-
+				var msgObj = {
+					"id_msg":id_msg,
+					"id_dialog":obj['id_dialog'],
+					"msg":msgParse,
+					"id_1":obj['id_1'],
+					"id_2":obj['id_2'],
+					"user_1":obj['user_1'],
+					"user_2":obj['user_1'],
+					"id_author":obj['id_author'],
+					"time":time,
+					"date":dateFormated,
+					"read":false,
+					"edit":false
+				}		
 				socket.emit('getMsg',msgObj);
 				if(users[obj['id_2']]){
 					try {
@@ -378,5 +378,12 @@ io.on('connection', (socket) => {
 
 
 
-
+function urlify(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+        return '<a href="' + url + '">' + url + '</a>';
+    })
+    // or alternatively
+    // return text.replace(urlRegex, '<a href="$1">$1</a>')
+}
 
