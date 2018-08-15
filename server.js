@@ -115,13 +115,12 @@ io.on('connection', (socket) => {
 				for(var k in objFind){
 					var id_2 = obj['id_user'] == objFind[k]['id_1']?objFind[k]['id_2']:objFind[k]['id_1']
 
-					var push = {'dialog':objFind[k],'last_msg':'','count_unread':0,"online":false}
-					if(users[id_2]){
-						push['online'] = true;
-					}
+					var push = {'dialog':objFind[k],'last_msg':'','count_unread':0,"date":"",}
+					
 					for(j in msg){
 						if(objFind[k]['_id'] == msg[j]['id_dialog'] ){
 							push['last_msg'] = msg[j];
+							push['date'] = msg[j]['createdAt'];
 							break;
 						}
 					}
@@ -165,6 +164,19 @@ io.on('connection', (socket) => {
 		}
 	})
 
+	socket.on('load prev msg',(obj)=>{
+		console.log(obj)
+		msgModel.find({_id:{$gt: obj['id']}})
+				.sort({'_id':-1})
+				.limit(10)
+				.exec(function(err, msg) {
+					console.log(msg)
+					socket.emit('result load prev msg',msg)
+				})
+
+	})
+
+
 
 
 
@@ -179,7 +191,7 @@ io.on('connection', (socket) => {
 
 				msgModel.find({'id_dialog':objFind['_id']})
 				.sort({'_id':-1})
-				.limit(100)
+				.limit(10)
 				.exec(function(err, msg) {
 					var res = msg.reverse()
 					if (err) throw err;
@@ -211,7 +223,7 @@ io.on('connection', (socket) => {
 								socket.emit('result_find_dialog',objFind)
 								msgModel.find({'id_dialog':objFind['_id']})
 								.sort({'_id':-1})
-								.limit(100)
+								.limit(10)
 								.exec(function(err, msg) {
 									var res = msg.reverse()
 									 /*mongoose.disconnect();*/
@@ -381,7 +393,7 @@ io.on('connection', (socket) => {
 function urlify(text) {
     var urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.replace(urlRegex, function(url) {
-        return '<a href="' + url + '">' + url + '</a>';
+        return '<a target="blank" href="' + url + '">' + url + '</a>';
     })
     // or alternatively
     // return text.replace(urlRegex, '<a href="$1">$1</a>')
