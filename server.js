@@ -42,7 +42,8 @@ var msgScheme = new Schema({
 	user_1:Object,
 	user_2:Object,
 	time:String,
-	date:String
+	date:String,
+	file:Boolean
 },{timestamps: true});
 
 
@@ -166,11 +167,10 @@ io.on('connection', (socket) => {
 
 	socket.on('load prev msg',(obj)=>{
 		console.log(obj)
-		msgModel.find({_id:{$gt: obj['id']}})
+		msgModel.find({_id:{$lt: obj['id']}})
 				.sort({'_id':-1})
-				.limit(10)
+				.limit(5)
 				.exec(function(err, msg) {
-					console.log(msg)
 					socket.emit('result load prev msg',msg)
 				})
 
@@ -202,7 +202,6 @@ io.on('connection', (socket) => {
 					
 					if(err) console.log(err);				
 					if(result){
-						console.log(result)
 						var newDialogModel = new dialogModel();
 						dialogModel.create({
 							id_1:result['0']['id'],
@@ -252,10 +251,8 @@ io.on('connection', (socket) => {
 		}
 	})
 	socket.on('edit message', (obj)=>{
-		console.log(obj)
 		msgModel.update({_id: obj['id_msg']}, {msg: obj['msg'],edit:true}, function(err, result){
 		    if(err)  console.log(err);
-		    console.log(result);
 		    if(result){
 		    	socket.emit('new edit message',obj)
 		    	if( users[obj['id_2']] ){
@@ -279,7 +276,6 @@ io.on('connection', (socket) => {
 		    	}	
 		    }
 		});*/
-		console.log(obj)
 
 		msgModel.remove({_id:obj['id_msg']}, function(err, result){
 			if(err) console.log(err)
@@ -304,9 +300,10 @@ io.on('connection', (socket) => {
 		var dateFormated = date.toISOString().substr(0,10);
 		var time = date.toLocaleTimeString();
 		var id_msg;
-
-
-		var msgParse = urlify(obj['msg']);
+		var msgParse = obj['msg'];
+		if(obj['file'] == false){
+			msgParse = urlify(obj['msg']);
+		}
 		var newMessageModel = new msgModel();
 			msgModel.create({
 				id_dialog:obj['id_dialog'],
@@ -319,7 +316,8 @@ io.on('connection', (socket) => {
 				time:time,
 				date:dateFormated,
 				read:read,
-				edit:false
+				edit:false,
+				file:obj['file']
 			}, function (err, msg) {
 				if (err){ return err}
 				var id_msg = msg.id;
@@ -335,7 +333,8 @@ io.on('connection', (socket) => {
 					"time":time,
 					"date":dateFormated,
 					"read":false,
-					"edit":false
+					"edit":false,
+					"file":obj['file']
 				}		
 				socket.emit('getMsg',msgObj);
 				if(users[obj['id_2']]){
@@ -375,19 +374,10 @@ io.on('connection', (socket) => {
 			
 	})
 
-
-
-
-
 	socket.on('disconnect',(sock)=>{
-		
 		delete users[listSocket[socket.id]]
 	})
 });
-
-
-
-
 
 
 function urlify(text) {
@@ -395,7 +385,5 @@ function urlify(text) {
     return text.replace(urlRegex, function(url) {
         return '<a target="blank" href="' + url + '">' + url + '</a>';
     })
-    // or alternatively
-    // return text.replace(urlRegex, '<a href="$1">$1</a>')
 }
 
