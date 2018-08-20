@@ -88,10 +88,14 @@ io.on('connection', (socket) => {
 	})
 
 	socket.on('check online', (obj)=>{
-		if(typeof users[obj['id_2']] != 'undefined' && obj['id_2'] != null){
-			socket.emit('check online',true)
+		if(users[obj['id_2']]){
+			socket.emit('result check online',{bool:true,time:''})
 		}else{
-			socket.emit('check online',false)
+			var time = false;
+			if(listDisconnect[obj['id_2']]){
+				time = timeSince(listDisconnect[obj['id_2']]);
+			}
+			socket.emit('result check online',{bool:false,time:time})
 		}
 	})
 
