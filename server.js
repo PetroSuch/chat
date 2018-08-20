@@ -71,6 +71,7 @@ function findUserSocketById(id_user){}
 
 var users = {};
 var listSocket = {};
+var listDisconnect = {};
 io.on('connection', (socket) => {
 
 	socket.on('check_online_list_dialog', (obj)=>{
@@ -379,10 +380,43 @@ io.on('connection', (socket) => {
 	})
 
 	socket.on('disconnect',(sock)=>{
+		if(listDisconnect[socket.id_1]){
+			listDisconnect[socket.id_1] = new Date().getTime()
+		}else{
+			listDisconnect[socket.id_1] = '';
+			listDisconnect[socket.id_1] = new Date().getTime()
+		}
+		for (var k in listDisconnect) {
+			console.log('user '+k+' last visit '+timeSince(listDisconnect[k]))
+		}
 		delete users[listSocket[socket.id]]
 	})
 });
 
+function timeSince(date) {
+	  var seconds = Math.floor((new Date().getTime() - date)/1000);
+	  var interval = Math.floor(seconds / 31536000);
+	  if (interval > 1) {
+	    return interval + " years";
+	  }
+	  interval = Math.floor(seconds / 2592000);
+	  if (interval > 1) {
+	    return interval + " months";
+	  }
+	  interval = Math.floor(seconds / 86400);
+	  if (interval > 1) {
+	    return interval + " days";
+	  }
+	  interval = Math.floor(seconds / 3600);
+	  if (interval > 1) {
+	    return interval + " hours";
+	  }
+	  interval = Math.floor(seconds / 60);
+	  if (interval >= 1) {
+	    return interval + " minutes";
+	  }
+	  return Math.floor(seconds) + " seconds";
+}
 
 function urlify(text) {
     var urlRegex = /(https?:\/\/[^\s]+)/g;
