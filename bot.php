@@ -1,5 +1,6 @@
 <?php
 // parameters
+phpinfo();
 $hubVerifyToken = 'verify-token-chat';
 $accessToken =   "EAAEh0ZB48ZAKgBALFJLZARUeMcZCw7mUVwFwSHWTQgbkELyBZCy2nZBOQ8k1ZBWaPf6YcprzDR5bsdjxOjEMZCM1ieRNnI6XheQeJgtu27FC7QEDGtT42UPQFnYnCu0zLW2W40mo4HBrZCRatWi4IaSCL6hQOIj1CUqwFSWZB381jlhgZDZD";
 
