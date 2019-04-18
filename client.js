@@ -1,7 +1,15 @@
 //956107799194-vnbcq8gk3efjtjo5g28rijknu4o8tnsv.apps.googleusercontent.com
 //4kW__Hun48X6tqzfohUMC8p_
+var HOST = 'ws://translate-chat-online.herokuapp.com:3000';
+var ws = new WebSocket(HOST);
+var el = document.getElementById('server-time');
+ws.onmessage = function (event) {
+  el.innerHTML = 'Server time: ' + event.data;
+};
 var port =  3000;
-const socket = io.connect('http://localhost:'+port);
+//const socket = io.connect('http://localhost:'+port);
+const socket = io();
+console.log(socket)
 const url = new URL(document.location); 
 
 console.log(localStorage)
