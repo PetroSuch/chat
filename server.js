@@ -27,6 +27,7 @@ server.listen(port, () => {
 });
 io.on('connection', (socket) => {
 	socket.on('signin',(data)=>{
+		console.log('signin',data)
 		var sql = "SELECT * FROM  users WHERE email='"+data.email+"'";
 		con.query(sql, function (err, result) {
 			if(result.length == 0){
@@ -42,6 +43,7 @@ io.on('connection', (socket) => {
 		})
 	})
 	socket.on('client_new_user',(data)=>{
+		console.log('client_new_user',data)
 		if(data.id_user != null && data.url_chat == null){
 			/*додаєм юзера в діалог*/
 			var url_chat = new Date().getTime(); 
@@ -69,6 +71,7 @@ io.on('connection', (socket) => {
 		}
 	})
 	socket.on('client_change_lang',(data)=>{
+		console.log('client_change_lang',data)
 		if(data.id_user != 'undefined'){
 			var sql_update = "UPDATE users SET lang = '"+data.lang+"' WHERE id ="+data.id_user;
 			con.query(sql_update, function (err2, result2) {
@@ -78,6 +81,7 @@ io.on('connection', (socket) => {
 		}
 	})
 	socket.on('client_load_chat_msg',(data)=>{
+		console.log('client_load_chat_msg',data)
 		if(data.id_chat != 'undefined'){
 			var sql = "SELECT * FROM  message WHERE chat_id='"+data.id_chat+"'";
 			con.query(sql, function (err, result) {
@@ -87,6 +91,7 @@ io.on('connection', (socket) => {
 		}
 	})
 	socket.on('client_send_new_msg',(data)=>{
+		console.log('client_send_new_msg',data)
 		//socket.emit('test_emit',socket)
 		var sql = "SELECT * FROM  users WHERE room="+data.url_chat;
 			con.query(sql, function (err, result) {
@@ -121,7 +126,7 @@ io.on('connection', (socket) => {
 		});
 	})
 	socket.on('disconnect',(data)=>{
-
+		console.log('disconect')
 		/*var sql = "SELECT * FROM  chats WHERE users LIKE '%" + socket.id + "%'";
 			con.query(sql, function (err, result) {
 				if (err) throw err;
