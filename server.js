@@ -21,7 +21,7 @@ con.connect(function(err) {
 
 
 
-app.use(express.static(path.join(__dirname, "")));
+app.use(express.static(path.join("/")));
 server.listen(port, () => {
   console.log("Listening on port " + port);
 });
