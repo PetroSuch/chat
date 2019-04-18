@@ -8,10 +8,10 @@ var mysql = require('mysql');
 var port = process.env.PORT || 3000;
 var googleTranslate = require('google-translate')('AIzaSyDrn4uhUxn2Jk8HopmbtBsDe4q3ILC5LgE');
 var con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "chat"
+  host: "remotemysql.com",
+  user: "TggTikyCK7",
+  password: "JgoDz9XiW2",
+  database: "TggTikyCK7"
 });
 
 con.connect(function(err) {
