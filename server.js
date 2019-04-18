@@ -21,10 +21,13 @@ con.connect(function(err) {
 
 
 
-app.use(express.static(path.join("/")));
+app.use(express.static(path.join(__dirname, "public")));
 server.listen(port, () => {
-	console.log(__dirname)
   console.log("Listening on port " + port);
+});
+app.get('/',function(req,res) {
+	console.log(req,res)
+  res.sendFile('index.html');
 });
 io.on('connection', (socket) => {
 	socket.on('signin',(data)=>{
