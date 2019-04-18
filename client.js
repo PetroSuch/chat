@@ -1,6 +1,6 @@
 //956107799194-vnbcq8gk3efjtjo5g28rijknu4o8tnsv.apps.googleusercontent.com
 //4kW__Hun48X6tqzfohUMC8p_
-var port =  3000;
+var port =  process.env.PORT || 3000;
 const socket = io.connect('http://localhost:'+port);
 const url = new URL(document.location); 
 
