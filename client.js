@@ -1,10 +1,10 @@
 //956107799194-vnbcq8gk3efjtjo5g28rijknu4o8tnsv.apps.googleusercontent.com
 //4kW__Hun48X6tqzfohUMC8p_
-var port = process.env.PORT || 3000;
+var port = 17185;
 const socket = io.connect('https://translate-chat-online.herokuapp.com:'+port);
 const url = new URL(document.location); 
 
-console.log(localStorage)
+console.log(localStorage,socket)
 function onSignIn(googleUser) {
 	var profile = googleUser.getBasicProfile();
 	var obj = {'data_type':'signin','name':profile.getName(),'email':profile.getEmail(),'image': profile.getImageUrl(),'lang':$('#lang').val()}
