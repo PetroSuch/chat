@@ -23,6 +23,7 @@ con.connect(function(err) {
 
 app.use(express.static(path.join("/")));
 server.listen(port, () => {
+	console.log(__dirname)
   console.log("Listening on port " + port);
 });
 io.on('connection', (socket) => {
