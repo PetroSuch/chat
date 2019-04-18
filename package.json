@@ -4,15 +4,16 @@
   "description": "a simple real-time chat ap",
   "main": "server.js",
   "scripts": {
-     "start": "node server.js"
+    "start": "node server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^4.14.1",
-    "socket.io": "^1.7.2",
-    "mongodb": "^3.1.1",
-    "mongoose": "^5.2.1",
-    "mysql": "^2.15.0"
+    "google-translate": "^2.2.0",
+    "google-translate-api": "^2.3.0",
+    "mysql": "^2.15.0",
+    "nodemon": "^1.18.11",
+    "socket.io": "^1.7.2"
   }
 }
