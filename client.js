@@ -3,7 +3,7 @@
 
 var port =  3000;
 //const socket = io.connect('http://localhost:'+port);
-const socket = io();
+const socket = io.connect();
 console.log(socket)
 const url = new URL(document.location); 
 
