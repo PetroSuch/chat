@@ -20,12 +20,15 @@ con.connect(function(err) {
 });
 
 
-
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(__dirname));
+//app.use(express.static(path.join(__dirname, "public")));
 
 /*app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });*/
+app.get('/', function(req, res){
+  res.sendFile(__dirname + '/index.html');
+});
 server.listen(port, () => {
   console.log("Listening on port " + port);
 });

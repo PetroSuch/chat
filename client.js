@@ -31,7 +31,7 @@ $(document).ready(()=>{
 		$('.g-signin2').hide()
 	}
 	socket.on('connect', function(data) {
-		console.log('connect',data)
+		console.log('connect')
 		if(localStorage.getItem('id_user') != null && url.searchParams.get('url_chat') == null){
 			socket.emit('client_new_user',{'lang':$('#lang').find('option:selected').val(),'id_user':localStorage.getItem('id_user')});
 		}else if(localStorage.getItem('id_user') != null){
