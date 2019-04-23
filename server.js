@@ -21,12 +21,7 @@ con.connect(function(err) {
 
 
 app.use(express.static(__dirname));
-//app.use(express.static(path.join(__dirname, "public")));
-
-/*app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
-});*/
-app.get('/', function(req, res){
+app.get('/index', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 server.listen(port, () => {
@@ -35,9 +30,10 @@ server.listen(port, () => {
 
 io.on('connection', (socket) => {
 	socket.on('signin',(data)=>{
-		console.log('signin',data)
+		//console.log('signin',data)
 		var sql = "SELECT * FROM  users WHERE email='"+data.email+"'";
 		con.query(sql, function (err, result) {
+			if (err) throw err;
 			if(result.length == 0){
 				var sql2 = "INSERT INTO users (name,email,image,lang) VALUES ('"+data.name+"','"+data.email+"','"+ data.image+"','"+ data.lang+"')";
 				con.query(sql2, function (err2, result2) {
@@ -50,58 +46,117 @@ io.on('connection', (socket) => {
 			}
 		})
 	})
-	socket.on('client_new_user',(data)=>{
-		console.log('client_new_user',data)
-		if(data.id_user != null && data.url_chat == null){
-			/*додаєм юзера в діалог*/
-			var url_chat = new Date().getTime(); 
-				socket.join(url_chat);
-			var sql = "INSERT INTO chats (url) VALUES ('"+url_chat+"')";
-			con.query(sql, function (err, result) {
-				var sql_update = "UPDATE users SET room = '"+url_chat+"' WHERE id ="+data.id_user;
-				con.query(sql_update, function (err2, result2) {
+
+	socket.on('client_load_dialog',(data)=>{
+		console.log('client_load_dialog',data)
+		if(data.id_user != null){
+			var sql = "SELECT * FROM  users WHERE id="+data.id_user;
+			socket.join(data.url_chat);
+			con.query(sql, function (err3, result3) {
+				if (err3) throw err3;
+				var sql_update = "SELECT * FROM `users_chat` WHERE room='"+data.url_chat+"' AND  id_user="+data.id_user;
+				con.query(sql_update,  (err2, result2)=>{
 					if (err2) throw err2;
-					socket.emit('server_new_chat_data',{"url_chat":url_chat,"id_chat":result.insertId,"id_user":data.id_user,'lang':result2.lang})
+					if(result2.length == 0 && data.url_chat != null){
+						var sql_new_chat = "INSERT INTO users_chat (id_user,room,lang) VALUES ("+data.id_user+",'"+data.url_chat+"','"+data.lang+"')"
+							con.query(sql_new_chat, (err3, result3)=>{
+							chat.reloadUsersListDialog(data.url_chat)
+						})
+					}else{
+						chat.reloadUsersListDialog(data.url_chat)
+					}						
 				});
 			})
-		}else{
-			var sql_update = "UPDATE users SET room = '"+data.url_chat+"' WHERE id ="+data.id_user;
-			con.query(sql_update, function (err2, result2) {
-				if (err2) throw err2;
-				socket.join(data.url_chat);
-				var sql = "SELECT * FROM  chats WHERE url='"+data.url_chat+"'";
-				con.query(sql, function (err, result) {
-					if (err) throw err;
-					socket.emit('server_new_chat_data',{"url_chat":result[0]['url'],"id_chat":result[0]['id'],"id_user":data.id_user,'lang':data.lang})
-				})
-				
-			});
+			
 		}
+	})
+
+
+	socket.on('client_create_new_dialog',(data)=>{
+		console.log('create new dialog',data)
+		var url_chat = new Date().getTime(); 
+			socket.join(url_chat);
+		var sql_new_chat = "INSERT INTO users_chat (id_user,room,lang) VALUES ("+data.id_user+",'"+url_chat+"','"+data.lang+"')"
+		con.query(sql_new_chat, (err, res)=>{
+			if(err) throw err;
+			console.log(res)
+			chat.reloadUsersListDialog(url_chat)
+		})
+	})
+
+
+	socket.on('client_load_list_dialog',(data)=>{
+		var sql = "SELECT * FROM users_chat WHERE id_user ="+data.id_user;
+		con.query(sql,(err,res)=>{
+			if (err) throw err;
+			var chats = [];
+			for(var k in res){
+				socket.join(res[k]['room'])
+				chats.push(res[k]['room'])
+			}
+			if(chats.length > 0){
+				chats = '('+chats.join(",")+')';
+				var sql2 = "SELECT * FROM users_chat WHERE room IN "+chats;
+				con.query(sql2, function (err2, res2) {
+					if (err2) throw err2;
+					var id_users = []
+					for(var l in res2){
+						id_users.indexOf(res2[l]['id_user']) == -1?id_users.push(res2[l]['id_user']):''
+					}
+					id_users = '('+id_users.join(",")+')';
+					var sql3 = "SELECT * FROM users WHERE id IN "+id_users;
+					//console.log(id_users,sql3)
+					con.query(sql3, function (err3, res3) {
+						if (err) throw err;
+						var objUser = [];
+						for(var k in res2){
+							for(var y in res3){
+								if(res2[k]['id_user'] == res3[y]['id']){
+									res3[y]['room'] = res2[k]['room']
+									res3[y]['lang'] = res2[k]['lang']
+								}
+							}
+						}
+						socket.emit('server_load_list_dialog',{'users':res3,'chats':res})
+					})
+				})
+			}else{
+				socket.emit('server_load_list_dialog',{'users':[],'chats':[]})
+			}
+			
+		})
+		
 	})
 	socket.on('client_change_lang',(data)=>{
 		console.log('client_change_lang',data)
 		if(data.id_user != 'undefined'){
-			var sql_update = "UPDATE users SET lang = '"+data.lang+"' WHERE id ="+data.id_user;
+			var sql_update = "UPDATE users_chat SET lang = '"+data.lang+"' WHERE id_user ="+data.id_user+" AND room='"+data.chat_url+"'";
 			con.query(sql_update, function (err2, result2) {
 				if (err2) throw err2;
+				console.log(result2,sql_update)
 			});
-			
 		}
 	})
 	socket.on('client_load_chat_msg',(data)=>{
-		console.log('client_load_chat_msg',data)
-		if(data.id_chat != 'undefined'){
-			var sql = "SELECT * FROM  message WHERE chat_id='"+data.id_chat+"'";
+		
+		if(data.url_chat != 'undefined'){
+			//console.log('client_load_chat_msg',data)
+			var sql = "SELECT * FROM  message WHERE chat_id='"+data.url_chat+"' ORDER BY id ";
 			con.query(sql, function (err, result) {
 				if (err) throw err;
-				socket.emit('server_get_chat_msg',result)
+				var sql2 = "SELECT users_chat.lang AS 'lang',users.id AS 'id',users.name AS 'user_name', users.image AS 'user_image' FROM  users_chat JOIN users ON users.id=users_chat.id_user WHERE users_chat.room='"+data.url_chat+"'";
+				con.query(sql2, function (err2, result2) {
+					if(err2) throw err2;
+					socket.emit('server_get_chat_msg',{'messages':result,'chat_users':result2})
+				})
 			});
 		}
 	})
+	
 	socket.on('client_send_new_msg',(data)=>{
-		console.log('client_send_new_msg',data)
-		//socket.emit('test_emit',socket)
-		var sql = "SELECT * FROM  users WHERE room="+data.url_chat;
+		//console.log('client_send_new_msg',data)
+		data.msg = data.msg.trim()
+		var sql = "SELECT * FROM  users_chat  WHERE room ='"+data.url_chat+"'";
 			con.query(sql, function (err, result) {
 			if (err) throw err;
 			if(result.length > 0){
@@ -109,44 +164,39 @@ io.on('connection', (socket) => {
 					var objMsg = {};
 					var count = 1;
 					for (var k in result) {
-						const lang = result[k]['lang']
+						const lang = result[k]['lang'] !=undefined?result[k]['lang']:'en';
 						googleTranslate.translate(data.msg, lang, function(err, translation){
-							if (err) throw err;
+							if (err) throw reject(err);
 							objMsg[lang] = translation.translatedText;
 							if(count == result.length ){
 								resolve(objMsg)
 							}
 							count++;
 						})
-
 					}
 				});
-
 				pr.then(function(obj){
+					console.log(obj)
 					io.sockets.in(data.url_chat).emit('server_new_msg',{"date":data.date,"msg_from":data.id_user,"msg":obj});
 					var sql = "INSERT INTO message (chat_id,msg_from,msg,date) VALUES ('"+data.url_chat+"','"+data.id_user+"','"+JSON.stringify(obj)+"','"+data.date+"')";
 					con.query(sql, function (err, result) {
 						if (err) throw err;
 					});
-
-				})	
+				}).catch(function (err) {
+				     console.log(err);
+				});
 			}
 		});
 	})
 	socket.on('disconnect',(data)=>{
 		console.log('disconect')
-		/*var sql = "SELECT * FROM  chats WHERE users LIKE '%" + socket.id + "%'";
-			con.query(sql, function (err, result) {
-				if (err) throw err;
-				if(result.length > 0){
-					load_chat_data = result;
-					var users = JSON.parse(result[0]['users']);
-						users.splice(users.indexOf(socket.id),1)
-						users = JSON.stringify(users);
-					var sql_update = "UPDATE chats SET users = '"+users+"' WHERE url ='"+result[0].url+"'";
-					con.query(sql_update, function (err_2, result_2) {});
-				}
-			});*/
 	})
+
+
+	var chat = {
+		reloadUsersListDialog: (url_chat)=>{
+			io.sockets.in(url_chat).emit('reloadInf',{'type':'list-dialog'})
+		}
+	}
 });
 

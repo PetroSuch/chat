@@ -1,56 +1,102 @@
-<!DOCTYPE html>  
-<html>  
-    <head>
-      <title> Real Time Chat </title>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <link rel="stylesheet" href="style.css" />
-      <meta name="google-signin-client_id" content="956107799194-vnbcq8gk3efjtjo5g28rijknu4o8tnsv.apps.googleusercontent.com">
-      <link rel="stylesheet" href="bootstrap.min.css" crossorigin="anonymous">
-    </head>
-    <body>
-      <div id="server-time"></div>
-        <div class="g-signin2" data-onsuccess="onSignIn" style="display: none;"></div>
-        <div id="chat"  style="display: none;">
-            <!-- <select id="lang">
-                <option value="en">En</option>
-                <option value="ukr">Ua</option>
-            </select>
-            <input id="message" type="text" placeholder="message" value="msg">
-            
-            <a id="send" >Send</a> -->
-            <div class="input-group mb-3">
-              <input id="message" type="text" class="form-control"  placeholder="message" value="msg">
-              <select id="lang" class="form-control">
-                <option value="en">En</option>
-                <option value="ukr">Ua</option>
-              </select>
-              <input type="button" value="Send"  id="send" class="input-group-text">
-            </div>
-            <h2>Chat Messages</h2>
-            <div id="msg_html">
-               <div class="container" style="display: none;" id="from" >
-                  <img src="https://x1.xingassets.com/assets/frontend_minified/img/users/nobody_m.original.jpg" alt="Avatar" style="width:100%;">
-                  <p>Hello. How are you today?</p>
-                  <span class="time-right">11:00</span>
-                </div>
-                <div class="container darker" style="display: none;" id="my" >
-                  <img src="https://x1.xingassets.com/assets/frontend_minified/img/users/nobody_m.original.jpg" alt="Avatar" class="right" style="width:100%;">
-                  <p style="text-align: right;">Hey! I'm fine. Thanks for asking!</p>
-                  <span class="time-left">11:01</span>
-                </div>
-            </div>
-            <div id="msg">
-               
-            </div>
-        </div>
-       
-        <!--  -->
-        <!-- <ul id="msg"></ul>
 
- -->    <script src="https://apis.google.com/js/platform.js" async defer></script>
-        <script src="https://cdn.jsdelivr.net/npm/translate@1/translate.min.js"></script>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-        <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
-        <script src="client.js"></script>  
-    </body>
-</html>  
+<!DOCTYPE html>
+<html>
+<head>
+  <title> Real Time Chat </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="google-signin-client_id" content="956107799194-vnbcq8gk3efjtjo5g28rijknu4o8tnsv.apps.googleusercontent.com">
+  <link rel="stylesheet" href="style.css" />
+  <!-- <link rel="stylesheet" href="bootstrap.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+ --></head>
+<body>
+  <div class="g-signin2" data-onsuccess="onSignIn" style="display: ;"></div>  
+  <div class="container clearfix" id="chat" style="display: none;">
+    <div class="people-list" id="people-list">
+      <!-- <div class="search">
+        <input type="text" placeholder="search" />
+        <i class="fa fa-search"></i>
+      </div> -->
+      <div class="search">
+        <a id="create-new" class="create-new-btn">Create new +</a>
+      </div>
+      <div class="container-list">
+        <ul class="list" id="list-dialog">
+          <li class="clearfix" id="chat_dialog" style="display: none;">
+            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/195612/chat_avatar_01.jpg" alt="avatar" />
+            <div class="about">
+              <div class="name">Vincent Porter</div>
+              <div class="status">
+                <i class="fa fa-circle online"></i> online
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="chat">
+      <div class="chat-header clearfix" style="display: none;">
+        <img id="img-user" src="" alt="avatar" />
+        <div class="chat-about">
+          <div class="chat-with">Chat with</div>
+          <div class="chat-num-messages">already - messages</div>
+        </div>
+        <i class="fa fa-star"></i>
+      </div> <!-- end chat-header -->
+      <div class="chat-history">
+        <ul>
+          <!-- <li>
+            <div class="message-data">
+              <span class="message-data-name"><i class="fa fa-circle online"></i> Vincent</span>
+              <span class="message-data-time">10:31 AM, Today</span>
+            </div>
+            <i class="fa fa-circle online"></i>
+            <i class="fa fa-circle online" style="color: #AED2A6"></i>
+            <i class="fa fa-circle online" style="color:#DAE9DA"></i>
+          </li> -->
+        </ul>
+      </div> <!-- end chat-history -->
+      <div class="chat-message clearfix" style="display: none;">
+        <textarea name="message-to-send" id="message-to-send" placeholder ="Type your message" rows="3"></textarea>
+        <select id="lang" class="lang-select form-control">
+          <option value="en">En</option>
+          <option value="ukr">Ua</option>
+        </select>
+        <button>Send</button>
+      </div> <!-- end chat-message -->
+    </div> <!-- end chat -->
+  </div> <!-- end container -->
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/handlebars.js/3.0.0/handlebars.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/list.js/1.1.1/list.min.js"></script>
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/translate@1/translate.min.js"></script>
+<script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+<script src="client.js"></script>  
+<script id="message-template" type="text/x-handlebars-template">
+  <li class="clearfix">
+    <div class="message-data align-right">
+      <span class="message-data-time" >{{time}}</span> &nbsp; &nbsp;
+      <span class="message-data-name" ></span> <i class="fa fa-circle me"></i>
+    </div>
+    <div class="message other-message float-right">
+      {{messageOutput}}
+    </div>
+  </li>
+</script>
+
+<script id="message-response-template" type="text/x-handlebars-template">
+  <li>
+    <div class="message-data">
+      <span class="message-data-name"><i class="fa fa-circle online"></i> </span>
+      <span class="message-data-time">{{time}}</span>
+    </div>
+    <div class="message my-message">
+      {{messageOutput}}
+    </div>
+  </li>
+</script>
+</body>
+</html>
