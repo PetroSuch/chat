@@ -138,9 +138,9 @@ io.on('connection', (socket) => {
 		}
 	})
 	socket.on('client_load_chat_msg',(data)=>{
-		
+		console.log('client_load_chat_msg',data)
 		if(data.url_chat != 'undefined'){
-			//console.log('client_load_chat_msg',data)
+			
 			var sql = "SELECT * FROM  message WHERE chat_id='"+data.url_chat+"' ORDER BY id ";
 			con.query(sql, function (err, result) {
 				if (err) throw err;
@@ -152,7 +152,7 @@ io.on('connection', (socket) => {
 			});
 		}
 	})
-	
+
 	socket.on('client_send_new_msg',(data)=>{
 		//console.log('client_send_new_msg',data)
 		data.msg = data.msg.trim()
