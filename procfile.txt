@@ -1,2 +1,0 @@
-web: nodemon server.js
-web: nodemon server-app.js

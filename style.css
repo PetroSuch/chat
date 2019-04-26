@@ -9,7 +9,15 @@
    /*padding: 40px 0;*/
    color: white;
 }
-
+.container-flex{
+  display: flex;
+}
+.space-between{
+  justify-content: space-between;
+}
+.justify-center{
+  justify-content: flex-start;
+}
  .container {
   /*display: flex;
   justify-content: center;*/
@@ -29,8 +37,14 @@
    overflow: hidden;
 }
  .people-list .search {
-
    padding: 20px;
+}
+.one-new-msg {
+  border: 1px solid rgba(255,255,255,0.5);
+  width: 25px;
+  height: 25px;
+  font-size: 10px;
+  border-radius: 40px;
 }
 .create-new-btn{
   color: #94c2ed;
@@ -58,27 +72,48 @@
    left: -25px;
 }
 .people-list ul {
-  padding-left: 20px;
+  padding-left: 0px !important;
 }
  .people-list ul li {
   list-style: none;
   cursor: pointer;
-  padding-bottom: 20px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 20px;
+}
+.people-list ul li.active {
+  background: rgba(255,255,255,0.1);
 }
 
+
  .people-list ul li img{
-  width: 50px;
+  width: 50px !important;
+  height: 50px !important;
   border-radius: 100px;
  }
- .people-list img {
-   float: left;
+#name_file{
+  padding-left: 5px;
+  font-size: 14px;
+}
+.upload-file-btn {
+  cursor: pointer;
+  margin-left: 20px;
+  font-size: 20px;
+}
+.container-center-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
  .people-list .about {
-   float: left;
+   /*
+   float: left;*/
+   width: calc(100% - 50px) !important;
+   padding-right: 20px;
    margin-top: 8px;
 }
  .people-list .about {
-   padding-left: 8px;
+   padding-left: 20px;
 }
  .people-list .status {
    color: #92959e;
