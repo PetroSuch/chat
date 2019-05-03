@@ -12,7 +12,11 @@ var con = mysql.createConnection({
   password: "JgoDz9XiW2",
   database: "TggTikyCK7"
 });
+var CryptoJS = require("crypto-js");
+var pass_encrypt = "baguvix-wanrltw";
 
+
+ 
 var users_online = {};
 con.connect(function(err) {
   console.log("Connected Mysql!");
@@ -130,7 +134,7 @@ io.on('connection', (socket) => {
 					for(var k in res){
 						res[k]['unread'] = 0;
 						for(y in res4){
-							if(res4[y]['chat_id'] == res[k]['room']){
+							if(res4[y]['chat_id'] == res[k]['room'] && res4[y]['msg_from'] != data.id_user){
 								res[k]['unread'] +=1;
 							}
 						}
@@ -178,9 +182,16 @@ io.on('connection', (socket) => {
 			con.query(sql, function (err, result) {
 				if (err) throw err;
 				var sql2 = "SELECT users_chat.lang AS 'lang',users.id AS 'id',users.name AS 'user_name', users.image AS 'user_image' FROM  users_chat JOIN users ON users.id=users_chat.id_user WHERE users_chat.room='"+data.url_chat+"'";
+				for(var k in result){
+					result[k]['msg'] =  CryptoJS.AES.decrypt(result[k]['msg'],pass_encrypt);
+					result[k]['msg'] = result[k]['msg'].toString(CryptoJS.enc.Utf8)
+				}
+
 				con.query(sql2, function (err2, result2) {
 					if(err2) throw err2;
-					chat.setReadStatus(data.url_chat)
+					var id_other_user = result2.length > 1?result2[0]['id'] != data.id_user?result2[0]['id']:result2[1]['id']:''
+					console.log(id_other_user)
+					chat.setReadStatus(data.url_chat,id_other_user)
 					socket.emit('server_get_chat_msg',{'messages':result,'chat_users':result2})
 				})
 			});
@@ -188,7 +199,7 @@ io.on('connection', (socket) => {
 	})
 
 	socket.on('client_send_new_msg',(data)=>{
-		//console.log('client_send_new_msg',data)
+		console.log('client_send_new_msg',data)
 		data.msg = data.msg.trim()
 		var sql = "SELECT * FROM  users_chat  WHERE room ='"+data.url_chat+"'";
 			con.query(sql, function (err, result) {
@@ -196,23 +207,32 @@ io.on('connection', (socket) => {
 			if(result.length > 0){
 				var pr = new Promise(function (resolve, reject) {
 					var objMsg = {'original':data.msg};
+					if(data.type != 'msg'){
+						objMsg['file_name'] = data.file_name
+						resolve(objMsg)
+						return false;
+					}
 					var count = 1;
 					for (var k in result) {
 						const lang = result[k]['lang'] !=undefined?result[k]['lang']:'en';
-						//googleTranslate.translate(data.msg, lang, function(err, translation){
-							//if (err) throw reject(err);
-							//objMsg[lang] = translation.translatedText;
-							objMsg[lang] = data.msg;
+						googleTranslate.translate(data.msg, lang, function(err, translation){
+							if (err) throw reject(err);
+							objMsg[lang] = translation.translatedText;
+							//objMsg[lang] = data.msg;
 							if(count == result.length ){
 								resolve(objMsg)
 							}
 							count++;
-						//})
+						})
 					}
 				});
 				pr.then(function(obj){
-					io.sockets.in(data.url_chat).emit('server_new_msg',{"date":data.date,"msg_from":data.id_user,"msg":obj,'url_chat':data.url_chat});
-					var sql = "INSERT INTO message (chat_id,msg_from,msg,date) VALUES ('"+data.url_chat+"','"+data.id_user+"','"+JSON.stringify(obj)+"','"+data.date+"')";
+
+					var msg_encrypt = CryptoJS.AES.encrypt(JSON.stringify(obj), pass_encrypt);
+					/*var decrypted = CryptoJS.AES.decrypt(encrypted, myPassword);
+					console.log(decrypted.toString(CryptoJS.enc.Utf8))*/
+					io.sockets.in(data.url_chat).emit('server_new_msg',{"time":data.time,"msg_from":data.id_user,"msg":obj,'url_chat':data.url_chat,'type':data.type});
+					var sql = "INSERT INTO message (chat_id,msg_from,msg,time,type,date) VALUES ('"+data.url_chat+"','"+data.id_user+"','"+msg_encrypt+"','"+data.time+"','"+data.type+"','"+data.date+"')";
 					con.query(sql, function (err, result) {
 						if (err) throw err;
 					});
@@ -221,6 +241,38 @@ io.on('connection', (socket) => {
 				});
 			}
 		});
+	})
+	socket.on('delete_chat',(data)=>{
+		if(data['id_user'] && data['url_chat'] && data['conf']){
+			var find_chat = "SELECT * FROM `users_chat` WHERE room='"+data['url_chat']+"'"
+			con.query(find_chat,(err,res)=>{
+				if(err){
+					throw err
+				}else{
+					console.log(res)
+					if(res.length > 0){
+						for(var k in res){
+							if(res[k]['id_user'] == data['id_user']){
+								var delet = "DELETE FROM `users_chat` WHERE id_user="+data['id_user']+" AND room='"+data['url_chat']+"'"
+								console.log(delet)
+								con.query(delet,(err2,res2)=>{
+									if(err2){
+										throw err2
+									}else{
+										if(res.length == 1){
+											var delet_msg = "DELETE FROM `message` WHERE chat_id='"+data['url_chat']+"'"
+											con.query(delet_msg,(err3,res3)=>{
+												if(err3) throw err3
+											})
+										}
+									}
+								})
+							}
+						}
+					}
+				}
+			})
+		}
 	})
 	socket.on('disconnect',(data)=>{
 		console.log('disconect')
@@ -260,11 +312,11 @@ io.on('connection', (socket) => {
 				users_online[id_user]['room'].push(room)
 			}
 		},
-		setReadStatus: (chat_id)=>{
-			var sql = "UPDATE `message` SET `view`=1 WHERE chat_id ='"+chat_id+"'"
+		setReadStatus: (chat_id,id_user)=>{
+			var sql = "UPDATE `message` SET `view`=1 WHERE chat_id ='"+chat_id+"' AND msg_from='"+id_user+"'"
 			con.query(sql,(err,res)=>{
 				if(err) throw err;
-				console.log('update read status')
+				console.log('update read status',id_user)
 			})
 		}
 	}
