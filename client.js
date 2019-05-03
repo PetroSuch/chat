@@ -402,11 +402,15 @@ $(document).ready(()=>{
    		if(data['type'] != 'msg'){
    			chat.runLoader(0)
    		}
-		$.each(data['msg'],function(k,v){
-			if(k == chat.$lang.val()){
-				chat.messageToSend = data['msg'][k]
-			}
-		})
+		if(data['msg_from'] != localStorage.getItem('id_user')){
+			$.each(data['msg'],function(k,v){
+				if(k == chat.$lang.val()){
+					chat.messageToSend = data['msg'][k]
+				}
+			})
+		}else{
+			chat.messageToSend = data['msg']['original']
+		}
 		chat.messageToSendDate = data['time']
 		if(data.url_chat == localStorage.getItem('url_chat')){
 			if(data['msg_from'] == localStorage.getItem('id_user')){
